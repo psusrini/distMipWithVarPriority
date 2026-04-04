@@ -30,13 +30,21 @@ PRIORITY_LIST_FILENAME: file that contains the variable priorty order that CPLEX
 
 NUM_WORKERS, SERVER_NAME, SERVER_PORT_NUMBER: used to create the workers and help them connect to their master to start the computation. 
 
-MAX_FARMED_LEAVES_COUNT: How many leaves each worker must make available for load balancing
+MAX_FARMED_LEAVES_COUNT: How many leaves each worker must make available for load balancing; set to W -1 where W is the number of workers in the cluster
 
-CPX_PARAM_VARSEL , CPX_PARAM_NODEFILEIND, CPX_PARAM_HEURFREQ , CPX_PARAM_MIPSEARCH, MAX_THREADS: configuration for CPLEX. refer to CPLEX documentation for definitions.
+CPX_PARAM_VARSEL , CPX_PARAM_NODEFILEIND, CPX_PARAM_HEURFREQ , CPX_PARAM_MIPSEARCH, MAX_THREADS: configuration for CPLEX. Refer to CPLEX documentation for definitions.
+
+-------------------------------------------------------
+The following files are in their own packages
+-------------------------------------------------------
+
+-------------------------
+PACKAGE: utilities
+-------------------------
 
 CPlexUtils:
 ------------
-Includes methods for configuring an using CPLEX
+Includes methods for configuring and using CPLEX
 
 getVariables(): given a CPLEX instance that has read a MIP file, returns the variables in that model as a Hashmap. This hashMap is used to retrive the CPLEX variable corresponding to a given variable name.
 
@@ -47,5 +55,56 @@ applyVarFixings(): invokes updateVariableBounds() to create a node , given the b
 getCPlex() : create a CPLEX instance that has read the MIP, and applies variable fixings needed to arrive at the subtree root node. Applies variable priority order if so instructed.
 
 areAllObjectiveCoeffsIntgeral() : Checks if all objective coefficients are intgeral, in which case (for example) a known solution of value 5 is provably optimal the moment CPLEX's best bound exceeds 4.
+
+-------------------------------------------------------
+
+-------------------------
+PACKAGE: subtree
+-------------------------
+
+BranchingCondition:
+-------------------
+A variables name, bound, and direction
+
+FarmedLeaf:
+--------------
+A leaf that will be sent to the server as a potential migration candidate, identified by the worker machine which offered it, its node ID in the subtree on that machine, its LP relaxed objective, and the variable fixings needed to arrive at it
+
+NodeAttachment:
+--------------
+attached to every CPLEX search tree node. Has a link to the parent node, and whether this node is the down branch child. The branching variable and bound are also included.
+ 
+SizeConstrainedMap:
+------------------
+A TreeMap that saves at most W-1 leaves for sending to the server as migration candidates.
+It has these methods:
+
+removeLeaf (): removes the largest LP relaxed objective leaf from the bag. This is done to insert another migration candidate which has a lower LP relaxed objective.
+
+add() : adds a new migration candidate leaf node to the bag
+
+getFarmedLeafs() : used by the server to collect all the migration candidate leaf nodes sent by a given worker
+
+SolveResult:
+-------------
+Results from a CPLEX search tree, including the bestKnownSolution, the dual bound, number of leaf nodes in the tree, number of nodes explored so far, and the relative MIP gap
+
+SubTree:
+----------------
+A CPLEX search tree, which is a subtree of the original MIP search tree.
+
+Constructor() : creates the subtree given the variable bounds needed to arrive at this subtree
+
+isCompletelySolved(): Whether this subtree has been solved to optimality or infeasibility
+
+end() : important to destroy the tree if once it is completely solved, in order to reclaim computer memory
+
+farm() : uses the farming callback to farm for upto W-1 leaves which are made available to the server as migration candidates
+
+prune() : uses the prune callback to prune leaf nodes that the server has accepted for migration to other workers
+
+sequentialSolve () : solves the CPLEX subtree for 30 minutes, and returns a SolveResult object. This is the method that does the "heavy lifting" at the worker by actually using CPLEX to solve a MIP subtree for 30 minutes.
+
+isWithinMIpGapThreshold(): checks if the subtree has been solved to optimality, infeasibility, or the distributed MIP gap is within the selected MIP Gap treshold. See the paper text for the definition of the distributed MIP gap.
 
 Sai
