@@ -123,7 +123,7 @@ doRampUp(): returns the W leaf nodes prepared by the ramp up node callback.
 PACKAGE: callbacks
 -------------------------
 
-These are CPLEX node and branch callbacks used 1) during ramp up, 2) for solution, 3) for farming leaf nodes for migration, and 4) for pruning migrated leaf nodes.
+These are CPLEX node and branch callbacks used 1) during ramp up, 2) during solution, 3) for farming leaf nodes for migration, and 4) for pruning migrated leaf nodes.
 
 BranchHandler:
 ---------------
