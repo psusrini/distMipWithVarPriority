@@ -168,4 +168,48 @@ processResponse(): prune leaf nodes and create a new subtree if idle
 
 prepareRequest():   populate the ClientRequestObject that will be sent to the server  
 
+-------------------------
+PACKAGE: server
+-------------------------
+
+This is the master computer that orchestrates the entire computation.
+
+Server:
+-------
+
+main() : starts the server and ramps up the MIP to 5 leaf nodes. Then accepts 5 worker connections. Recieves requests from these clients every half an hour and processes each request using a RequestHandler object.
+
+RequestHandler:
+----------------
+This class does most of the work on the master using these methods.
+
+run(): recieves ClientRequestObject requests from all the clients and stores them in a map. After all 5 requests have been recieved, they are processed and a ServerResponseObject response is sent to every client.
+
+prepareResponse(): calls populateResponseMap to prepare the response for each client. Note that the response to a client and its request are both cleared from the respective maps using a synchronized critical section.
+
+populateResponseMap() : Used to read all 5 incoming requests and prepare a response for every client. Note that the first thread that notices an empty response map and a full request map (with 5 entries) prepares all the responses. Access to the map of responses is synchronized, meaning that only 1 thread can enter it at a time.
+
+The first step is to initialize the load balancer, which resets its internal state in preparation for a new load balancing cycle.
+
+Then the best known solution is updated, a note is made of how many nodes have been processsed so far, and leaf nodes available for load balancing are given to the load balancer. 
+
+The server then checks for four conditions.
+
+1) if all workers are idle and it is just after ramp up, 1 leaf node is assigned to each worker to start the computation.
+   
+2) if all workers are idle and it is not just after ramp up, then the server announces completion and exits.
+   
+3) if no worker is idle, there is no need for load abalancing, and the server informs every worker to run another 30 minut emap cycle. Each client is given the updated value of the best known solution to use as cutoff.
+   
+4) the last case is when some workers are idle and some are not. This requires load balancing. Each client is given the updated value of the best known solution to use as cutoff. The idle workers are given a new assignment. The clieants which donated their leaf nodes are informed of which leaf nodes to prune because these leaves have been selected for migration to an idle worker.
+
+Loadbalancer:
+----------------
+
+addMigrationCandidate(): leaves available for migration are arranged in a map, with lowest LP relaxed objective first.
+
+balance(): every idle client is assigned the best remaining leaf available for migration (if one is available). Here "best" is defined as the lowest LP relaxed objective.
+
+updatePruneInstructions(): each client which has contributed a migrated leaf (or leaves) has to be informed of which leaf nodes to prune at the beginning of the next MAP cycle. These instructions are prepared in this method.
+
 Sai
