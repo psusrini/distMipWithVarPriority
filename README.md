@@ -99,12 +99,45 @@ isCompletelySolved(): Whether this subtree has been solved to optimality or infe
 
 end() : important to destroy the tree if once it is completely solved, in order to reclaim computer memory
 
-farm() : uses the farming callback to farm for upto W-1 leaves which are made available to the server as migration candidates
+farm() : uses the farming callback to farm for upto W-1 leaves which are later made available to the server as migration candidates. Done in single threaded mode.
 
-prune() : uses the prune callback to prune leaf nodes that the server has accepted for migration to other workers
+prune() : uses the prune callback to prune leaf nodes that the server has accepted for migration to other workers. Done in single threaded mode.
 
 sequentialSolve () : solves the CPLEX subtree for 30 minutes, and returns a SolveResult object. This is the method that does the "heavy lifting" at the worker by actually using CPLEX to solve a MIP subtree for 30 minutes.
 
 isWithinMIpGapThreshold(): checks if the subtree has been solved to optimality, infeasibility, or the distributed MIP gap is within the selected MIP Gap treshold. See the paper text for the definition of the distributed MIP gap.
+
+-------------------------
+PACKAGE: rampup
+-------------------------
+
+RampupNodeCallback:
+---------------------
+main(): prepares a tree with W leaf nodes, where W is the number of workers in the cluster. Makes these leaves available as a list.
+
+Rampup:
+----------
+doRampUp(): returns the W leaf nodes prepared by the ramp up node callback.
+
+-------------------------
+PACKAGE: callbacks
+-------------------------
+
+These are CPLEX node and branch callbacks used 1) during ramp up, 2) for solution, 3) for farming leaf nodes for migration, and 4) for pruning migrated leaf nodes.
+
+BranchHandler:
+---------------
+main() : accepts a list of nodes for pruning. At the begiining of a MAP cycle, prunes these nodes. If there are no leaf nodes left for pruning, records the branching condition for both child nodes in the search tree by attaching a node attachment into each node. 
+
+PruneNodecallback:
+------------------
+main(): takes the ID of the node to be pruned, and selects it so that it can be pruned.
+
+FarmNodecallback:
+-----------------
+
+main(): loops through all the leaf nodes of a subtree and adds them one by one to a size constrained Map. If the map already has W leaves, then a leaf already in the map having the largest LP relaxed objective is relaced with this leaf. In effect, this method collects upto 5 lowest LP relaxed objective leaf nodes from this subtree to send to the server as migration candidates.
+
+ 
 
 Sai
