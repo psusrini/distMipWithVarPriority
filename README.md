@@ -151,11 +151,17 @@ includes the worker name, the leaf nodes this worker is making available for ass
 Client:
 --------
 main(): connects to the server, and repeatedly executes these steps
+
     1) Sends a ClientRequestObject to the server, informing it of this worker's status. Note that, at the begininning and end of the computation, all workers report an idle status. 
+    
     2) recieves a response back from the server. This response contains an updated incumbent value which is used to update the worker's cutoff. The response may also contain a set of leaf nodes to prune form the current search tree. An idle client will recieve a new subtree root node to start exploring.
+    
     3) process the response and solve the subtree for 30 minutes 
+    
     4) after solving, farm leaf nodes to send to the server and include them in the ClientRequestObject
+    
     5) if work is complete before 30 minutes, idle until 30 minutes have elapsed since the last time the server was contacted.
+    
     6) go to step 1)
 
 processResponse(): prune leaf nodes and create a new subtree if idle
