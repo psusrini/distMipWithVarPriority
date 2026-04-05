@@ -138,6 +138,28 @@ FarmNodecallback:
 
 main(): loops through all the leaf nodes of a subtree and adds them one by one to a size constrained Map. If the map already has W leaves, then a leaf already in the map having the largest LP relaxed objective is relaced with this leaf. In effect, this method collects upto 5 lowest LP relaxed objective leaf nodes from this subtree to send to the server as migration candidates.
 
- 
+-------------------------
+PACKAGE: client
+-------------------------
+
+Each Client is a worker that reports to the master server
+
+ClientRequestObject:
+---------------------
+includes the worker name, the leaf nodes this worker is making available for assignment to idle workers, whether this worker is idle,  the local incumbent , and the number of nodes processed by the current subtree
+
+Client:
+--------
+main(): connects to the server, and repeatedly executes these steps
+    1) Sends a ClientRequestObject to the server, informing it of this worker's status. Note that, at the begininning and end of the computation, all workers report an idle status. 
+    2) recieves a response back from the server. This response contains an updated incumbent value which is used to update the worker's cutoff. The response may also contain a set of leaf nodes to prune form the current search tree. An idle client will recieve a new subtree root node to start exploring.
+    3) process the response and solve the subtree for 30 minutes 
+    4) after solving, farm leaf nodes to send to the server and include them in the ClientRequestObject
+    5) if work is complete before 30 minutes, idle until 30 minutes have elapsed since the last time the server was contacted.
+    6) go to step 1)
+
+processResponse(): prune leaf nodes and create a new subtree if idle
+
+prepareRequest():   populate the ClientRequestObject that will be sent to the server  
 
 Sai
